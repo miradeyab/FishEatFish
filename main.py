@@ -1,11 +1,15 @@
 from cmath import inf
 import pygame
-import os
-import time
+import random
+from enum import Enum
 
-SCREEN_WIDTH, SCREEN_HEIGHT = 900, 500
-SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 40, 55
-BULLET_WIDTH, BULLET_HEIGHT = 6, 6
+#initiaization logic
+pygame.init()
+info = pygame.display.Info()
+pygame.display.set_caption("Fish Eat Fish")
+
+SCREEN_WIDTH = info.current_w
+SCREEN_HEIGHT = info.current_h
 
 WIN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
@@ -13,173 +17,97 @@ WHITE = (255,255,255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 
+FONT = font = pygame.font.Font(pygame.font.get_default_font(), 12)
+
 FPS = 60
 
-BORDER = pygame.Rect(int(SCREEN_WIDTH / 2)  - 5, 0, 10, SCREEN_HEIGHT)
+SPAWN_PLAYER_SIZE = 10
+VELOCITY = 1
 
-SPACE_IMAGE = pygame.image.load(os.path.join('Assets', 'space.png'))
-YELLOW_SPACESHIP_IMAGE = pygame.image.load(os.path.join('Assets', 'spaceship_yellow.png'))
-RED_SPACESHIP_IMAGE = pygame.image.load(os.path.join('Assets', 'spaceship_red.png'))
+class Player:
+    def __init__(self, name, color, x, y, value, nextMove) -> None:
+        self.name = name
+        self.color = color
+        self.x = x
+        self.y = y
+        self.value = value
+        self.nextMove = nextMove
 
-SPACE = pygame.transform.scale(SPACE_IMAGE, (SCREEN_WIDTH, SCREEN_HEIGHT))
+class Fruit:
+    def __init__(self, x, y, value) -> None:
+        self.x = x
+        self.y = y
+        self.value = value
 
-YELLOW_SPACESHIP = pygame.transform.rotate(
-    pygame.transform.scale(YELLOW_SPACESHIP_IMAGE, (SPACESHIP_HEIGHT, SPACESHIP_WIDTH)),
-    90
-)
-
-RED_SPACESHIP = pygame.transform.rotate(
-    pygame.transform.scale(RED_SPACESHIP_IMAGE, (SPACESHIP_HEIGHT, SPACESHIP_WIDTH)),
-    -90
-)
-
-VEL = 5
-BULLET_VEL = 7
-MAX_BULLETS = 3
-BULLET_DELAY = 0.25
-
-def draw_window(yellow_pos, red_pos, yellow_bullets, red_bullets):
-    WIN.blit(SPACE, (0, 0))
-    pygame.draw.rect(WIN, BLACK, BORDER)
-    WIN.blit(YELLOW_SPACESHIP, yellow_pos) 
-    WIN.blit(RED_SPACESHIP, red_pos) 
-
-    for rect in yellow_bullets:
-        pygame.draw.rect(WIN, RED, rect)
+def draw_window(players, fruits):
+    pygame.draw.rect(WIN, WHITE, pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT))
     
-    for rect in red_bullets:
-        pygame.draw.rect(WIN, RED, rect)
+    for player in players:
+        pygame.draw.circle(WIN, player.color, (player.x, player.y), player.value)
+        playerSurface = pygame.font.Font.render(FONT, player.name, True, player.color)
+        WIN.blit(playerSurface, (player.x + player.value, player.y + player.value))
+
+    for fruit in fruits:
+        pygame.draw.rect(WIN, BLACK, (fruit.x - fruit.value / 2, fruit.y - fruit.value / 2, fruit.value, fruit.value))
 
     pygame.display.update()
 
-def red_handle_movement(key_pressed, red) :
-    if key_pressed[pygame.K_UP] :
-        red.top -= VEL
+def movePlayers(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
+    for player in players :
+        (up, down, left, right) = player.nextMove(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
 
-    if key_pressed[pygame.K_DOWN]:
-        red.top += VEL
+        if(up) :
+            player.y -= VELOCITY
 
-    if key_pressed[pygame.K_LEFT]:
-        red.left -= VEL
+        if(down) :
+            player.y += VELOCITY
 
-    if key_pressed[pygame.K_RIGHT]:
-        red.left += VEL
+        if(left) :
+            player.x -= VELOCITY
 
-def yellow_handle_movement(key_pressed, yellow) :
-    if key_pressed[pygame.K_w]: #UP
-        yellow.top -= VEL
+        if(right) :
+            player.x += VELOCITY
 
-    if key_pressed[pygame.K_s]: #DOWN
-        yellow.top += VEL
-
-    if key_pressed[pygame.K_a]: #LEFT
-        yellow.left -= VEL
-
-    if key_pressed[pygame.K_d]: #RIGHT
-        yellow.left += VEL
-
-def bounce(yellow, red):
-    if yellow.left < 0:
-        yellow.left = 0
-
-    if yellow.top < 0:
-        yellow.top = 0
-
-    if yellow.top + SPACESHIP_HEIGHT  > SCREEN_HEIGHT:
-        yellow.top = SCREEN_HEIGHT - SPACESHIP_HEIGHT
-
-    if yellow.left + SPACESHIP_WIDTH > BORDER.left:
-        yellow.left = BORDER.left - SPACESHIP_WIDTH
-
-
-    if red.left < BORDER.left + BORDER.width:
-        red.left = BORDER.left + BORDER.width
-
-    if red.top < 0:
-        red.top = 0
-
-    if red.top + SPACESHIP_HEIGHT  > SCREEN_HEIGHT:
-        red.top = SCREEN_HEIGHT - SPACESHIP_HEIGHT
-
-    if red.left + SPACESHIP_WIDTH > SCREEN_WIDTH:
-        red.left = SCREEN_WIDTH - SPACESHIP_WIDTH
-
-def bullets_physics(yellow_bullets, red_bullets, yellow, red) :
-    for bullet in yellow_bullets:
-        bullet.left += BULLET_VEL
- 
-        if bullet.left > SCREEN_WIDTH:
-            yellow_bullets.remove(bullet)
-            continue
-
-        if bullet.colliderect(red) :
-            yellow_bullets.remove(bullet)
-            continue
-
-    for bullet in red_bullets:
-        bullet.left -= BULLET_VEL
-
-        if bullet.left + bullet.width < 0:
-            red_bullets.remove(bullet)
-            continue
-
-        if bullet.colliderect(yellow):
-            red_bullets.remove(bullet)
-            continue
-
-def delay_bullets(key_pressed, yellow, red, yellow_bullets, red_bullets, last_yellow_bullet_time, last_red_bullet_time):
-    if key_pressed[pygame.K_RCTRL]:
-        if time.time() - last_red_bullet_time > BULLET_DELAY : 
-            red_bullets.append(pygame.Rect(red.left, red.top + int(SPACESHIP_HEIGHT / 2) - int(BULLET_HEIGHT / 2), BULLET_WIDTH, BULLET_HEIGHT))
-            last_red_bullet_time = time.time()
-
-    if key_pressed[pygame.K_f]:
-        if time.time() - last_yellow_bullet_time > BULLET_DELAY :
-            yellow_bullets.append(pygame.Rect(yellow.left + SPACESHIP_WIDTH, yellow.top + int(SPACESHIP_HEIGHT / 2) - int(BULLET_HEIGHT / 2), BULLET_WIDTH, BULLET_HEIGHT))
-            last_yellow_bullet_time = time.time()
-        
-    return last_yellow_bullet_time, last_red_bullet_time
+        player.x = min(SCREEN_WIDTH - player.value, max(player.value, player.x))
+        player.y = min(SCREEN_HEIGHT - player.value, max(player.value, player.y))
 
 def main():
-    yellow = pygame.Rect(100, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
-    red = pygame.Rect(700, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
-    yellow_bullets = []
-    red_bullets = []
-    last_yellow_bullet_time = -inf
-    last_red_bullet_time = -inf
+    players = []
+    fruits = []
+
+    # generate random players for testing
+    for i in range(1, 10):
+        players.append(
+            Player("player " + str(i),  
+            pygame.Color(random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)),
+            random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), SPAWN_PLAYER_SIZE,
+            lambda players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT : (bool(random.getrandbits(1)), False, False, bool(random.getrandbits(1)))
+            )
+        )
+
+    for i in range(1, 15):
+        fruits.append(
+            Fruit(random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), random.randint(5, 10))
+        )
 
     clock = pygame.time.Clock()
     run = True
-    
-    pygame.display.set_caption("Space Shoot")
 
     while run:
         clock.tick(FPS)
 
         for event in pygame.event.get():
-            #print(event)
-
             if event.type == pygame.QUIT:
                 run = False
 
-            '''
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RCTRL and len (red_bullets) < MAX_BULLETS:
-                    red_bullets.append(pygame.Rect(red.left, red.top + int(SPACESHIP_HEIGHT / 2) - int(BULLET_HEIGHT / 2), BULLET_WIDTH, BULLET_HEIGHT))
-                
-                if event.key == pygame.K_f and len(yellow_bullets) < MAX_BULLETS:
-                    yellow_bullets.append(pygame.Rect(yellow.left + SPACESHIP_WIDTH, yellow.top + int(SPACESHIP_HEIGHT / 2) - int(BULLET_HEIGHT / 2), BULLET_WIDTH, BULLET_HEIGHT))
-            '''
-        key_pressed = pygame.key.get_pressed()
-
-        red_handle_movement(key_pressed, red)
-        yellow_handle_movement(key_pressed, yellow)
-        bounce(yellow, red)
-
-        last_yellow_bullet_time, last_red_bullet_time = delay_bullets(key_pressed, yellow, red, yellow_bullets, red_bullets, last_yellow_bullet_time, last_red_bullet_time)
-        bullets_physics(yellow_bullets, red_bullets, yellow, red)
+        draw_window(players, fruits)
         
-        draw_window(yellow, red, yellow_bullets, red_bullets)
+        movePlayers(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
+
+        '''
+        calcuateFruitEats(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
+        calculatePlayersEats(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
+        '''
 
     pygame.quit()
 
