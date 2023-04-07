@@ -2,6 +2,7 @@ import math
 import pygame
 import random
 from enum import Enum
+import copy
 
 #initiaization logic
 pygame.init()
@@ -54,19 +55,15 @@ def draw_window(players, fruits):
 
 def movePlayers(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
     for player in players :
-        (up, down, left, right) = player.nextMove(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
+        otherPlayers = players.copy()
+        otherPlayers.remove(player)
 
-        if(up) :
-            player.y -= VELOCITY
+        (up, down, left, right) = player.nextMove(copy.deepcopy(player), otherPlayers, copy.deepcopy(fruits), SCREEN_WIDTH, SCREEN_HEIGHT)
 
-        if(down) :
-            player.y += VELOCITY
-
-        if(left) :
-            player.x -= VELOCITY
-
-        if(right) :
-            player.x += VELOCITY
+        player.y -= VELOCITY if up else 0   
+        player.y += VELOCITY if down else 0
+        player.x -= VELOCITY if left else 0 
+        player.x += VELOCITY if right else 0
 
         player.x = min(SCREEN_WIDTH - player.value, max(player.value, player.x))
         player.y = min(SCREEN_HEIGHT - player.value, max(player.value, player.y))
@@ -95,6 +92,9 @@ def isPlayerTouchingFruit(rect_tl, rect_size, circle_cpt, circle_rad):
 def isPlayerTouchingPlayer(p1, p2) :
     return math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2).real <= (p1.value + p2.value)
 
+def nextMoveTemplate(you, otherPlayers, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
+    return (False, bool(random.getrandbits(1)), False, bool(random.getrandbits(1)))
+
 def calculatePlayersEats(players) :
     for p1 in players :
         for p2 in players :
@@ -116,12 +116,13 @@ def main():
     # generate random players for testing
     for i in range(1, 10):
         players.append(
-            Player("player " + str(i),  
-            pygame.Color(random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)),
-            random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), 
-            #SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
-            random.randint(5, 15), #SPAWN_PLAYER_SIZE,
-            lambda players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT : (False, bool(random.getrandbits(1)), False, bool(random.getrandbits(1)))
+            Player(
+                "player " + str(i),  
+                pygame.Color(random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)),
+                random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), 
+                #SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
+                random.randint(5, 15), #SPAWN_PLAYER_SIZE,
+                nextMoveTemplate
             )
         )
 
@@ -129,7 +130,7 @@ def main():
         fruits.append(
             Fruit(
                 random.randint(SCREEN_WIDTH / 2, SCREEN_WIDTH), random.randint(SCREEN_HEIGHT / 2, SCREEN_HEIGHT), 
-                random.randint(5, 10)
+                random.randint(10, 20)
             )
         )
 
