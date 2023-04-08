@@ -117,7 +117,7 @@ def miraStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
 
     return strategy(you, predators, preys, SCREEN_WIDTH, SCREEN_HEIGHT)
 
-def mohamedStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
+def defaulStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
     predators = []
     preys = []
 
@@ -132,6 +132,58 @@ def mohamedStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
         preys.append(fruit)
 
     return strategy(you, predators, preys, SCREEN_WIDTH, SCREEN_HEIGHT)
+
+
+def towards(x, y, distX, distY) :
+    return (distY < y, distY > y, distX < x, distX > x)
+
+def awayFrom(x, y, distX, distY) :
+    (up, down, left, right) = towards(x, y, distX, distY)
+    return (not up, not down, not left, not right)
+
+def mohamedStrategy(me, players, fruits, W, H) :
+    x = me.x
+    y = me.y
+    r = me.value
+
+    enemey = players[0]
+    X = players[0].x
+    Y = players[0].y
+    R = players[0].value
+
+    GREAT_RADIUS = min(W, H) / 2
+
+    bestFruitValue = - math.inf
+    bestFruit = None 
+
+    biggestFruitSize = - math.inf
+
+    for f in fruits :
+        if f.value > biggestFruitSize :
+            biggestFruitSize = f.value
+
+    for f in fruits :
+        fruitValue = (1 -  (me.distance(f.x, f.y) / GREAT_RADIUS)) * (f.value / biggestFruitSize)
+        
+        if fruitValue > bestFruitValue :
+            bestFruitValue = fruitValue
+            bestFruit = f
+
+    if r > R :
+        # attack
+        preyValue = (me.distance(X, Y) / GREAT_RADIUS) * (R / biggestFruitSize)
+
+        if bestFruitValue > preyValue :
+            return towards(x, y, bestFruit.x, bestFruit.y)
+        else :
+            return towards(x, y, bestFruit.x, bestFruit.y)
+    else :
+        danger = (me.distance(X, Y) / GREAT_RADIUS)
+
+        if bestFruitValue > danger :
+            return towards(x, y, bestFruit.x, bestFruit.y)
+        else :
+            return awayFrom(x, y, X, Y)
 
 
 def strategy(you, predators, preys, W, H) :
@@ -206,7 +258,7 @@ def main():
             pygame.Color(204, 0, 204),
             random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), 
             SPAWN_PLAYER_SIZE,
-            miraStrategy
+            defaulStrategy
         )
     )
 
@@ -216,7 +268,7 @@ def main():
             pygame.Color(51, 51, 255),
             random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), 
             SPAWN_PLAYER_SIZE,
-            mohamedStrategy
+            defaulStrategy
         )
     )
 
@@ -238,7 +290,10 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-       
+        
+        if(len(players) <= 1) :
+            break;
+
         movePlayers(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
         calculatePlayersEats(players)
         calcuateFruitEats(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
