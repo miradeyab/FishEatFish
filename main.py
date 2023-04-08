@@ -102,20 +102,35 @@ def isPlayerTouchingPlayer(p1, p2) :
     return math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2).real <= (p1.value + p2.value)
 
 def miraStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
-    predators = []
-    preys = []
+  
+    DANGER_DISTANCE = SCREEN_WIDTH / 8
 
-    for player in players :
-        if(player.value > you.value) :
-            predators.append(player)
-        else : 
-            if (player.value < you.value) :
-                preys.append(player)
+    x = you.x
+    y = you.y
+    r = you.value
 
-    for fruit in fruits :
-        preys.append(fruit)
+    enemy = players[0]
+    enemyX = players[0].x
+    enemyY = players[0].y
+    enemyR = players[0].value
+    
+    bestFruit = None
+    minD = math.inf
 
-    return strategy(you, predators, preys, SCREEN_WIDTH, SCREEN_HEIGHT)
+    for fruit in fruits:
+        d = fruit.distance(x, y)
+
+        if d < minD:
+            minD = d
+            bestFruit = fruit
+
+    if r <= enemyR:
+        if enemy.distance(x, y) <= DANGER_DISTANCE:
+            return awayFrom(x, y, enemyX, enemyY)
+        else:
+            return towards(x, y, bestFruit.x, bestFruit.y)
+    else:
+        return towards(x, y, enemyX, enemyY)
 
 def defaulStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
     predators = []
@@ -258,7 +273,7 @@ def main():
             pygame.Color(204, 0, 204),
             random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), 
             SPAWN_PLAYER_SIZE,
-            defaulStrategy
+            miraStrategy
         )
     )
 
