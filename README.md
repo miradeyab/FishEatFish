@@ -1,4 +1,4 @@
-# SpaceShoot python game
+# FishEatFish python game
 
 to run the game install pipenv using the following command
 
