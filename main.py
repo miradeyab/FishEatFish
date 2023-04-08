@@ -9,8 +9,8 @@ pygame.init()
 info = pygame.display.Info()
 pygame.display.set_caption("Fish Eat Fish")
 
-SCREEN_WIDTH = info.current_w
-SCREEN_HEIGHT = info.current_h
+SCREEN_WIDTH = 1280 #info.current_w
+SCREEN_HEIGHT = 720 #info.current_h 
 
 WIN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
@@ -25,7 +25,16 @@ FPS = 60
 SPAWN_PLAYER_SIZE = 10
 VELOCITY = 1
 
-class Player:
+NUMBER_OF_FRUITS = 10
+MIN_FRUIT_SIZE = 5
+MAX_FRUIT_SIZE = 15
+
+class Object :
+    def distance(self, x, y) :
+        return math.sqrt((self.x - x) ** 2 + (self.y - y) ** 2)
+
+
+class Player(Object):
     def __init__(self, name, color, x, y, value, nextMove) -> None:
         self.name = name
         self.color = color
@@ -34,7 +43,7 @@ class Player:
         self.value = value
         self.nextMove = nextMove
 
-class Fruit:
+class Fruit(Object):
     def __init__(self, x, y, value) -> None:
         self.x = x
         self.y = y
@@ -92,8 +101,86 @@ def isPlayerTouchingFruit(rect_tl, rect_size, circle_cpt, circle_rad):
 def isPlayerTouchingPlayer(p1, p2) :
     return math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2).real <= (p1.value + p2.value)
 
-def nextMoveTemplate(you, otherPlayers, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
-    return (False, bool(random.getrandbits(1)), False, bool(random.getrandbits(1)))
+def miraStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
+    predators = []
+    preys = []
+
+    for player in players :
+        if(player.value > you.value) :
+            predators.append(player)
+        else : 
+            if (player.value < you.value) :
+                preys.append(player)
+
+    for fruit in fruits :
+        preys.append(fruit)
+
+    return strategy(you, predators, preys, SCREEN_WIDTH, SCREEN_HEIGHT)
+
+def mohamedStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
+    predators = []
+    preys = []
+
+    for player in players :
+        if(player.value > you.value) :
+            predators.append(player)
+        else : 
+            if (player.value < you.value) :
+                preys.append(player)
+
+    for fruit in fruits :
+        preys.append(fruit)
+
+    return strategy(you, predators, preys, SCREEN_WIDTH, SCREEN_HEIGHT)
+
+
+def strategy(you, predators, preys, W, H) :
+    x = you.x
+    y = you.y
+    value = you.value
+
+    min = math.inf
+    closestPredator = None
+
+    for predator in predators :
+        if predator.distance(x, y) < min :
+            min = predator.distance(x, y)
+            closestPredator = predator
+    
+    if closestPredator == None :
+        min = math.inf
+        closestPrey = None
+
+        for prey in preys :
+            if(prey.distance(x, y) < min) :
+                min = prey.distance(x, y)
+                closestPrey = prey
+
+        if(closestPrey == None) :
+            return (False, False, False, False)
+
+        return (closestPrey.y < y, closestPrey.y > y, closestPrey.x < x, closestPrey.x > x)
+    else :
+        max = - math.inf
+        furthestPrey = None
+
+        for prey in preys :
+            Ax = closestPredator.x - x
+            Ay = closestPredator.y - y
+            Bx = prey.x - x
+            By = prey.y - y
+
+
+            theta = math.acos(((Ax * Bx) + (Ay * By)) / (math.sqrt(Ax ** 2 + Ay ** 2) * math.sqrt(Bx ** 2 + By ** 2)))
+
+            if(theta > max) :
+                max = theta
+                furthestPrey = prey
+
+        if(furthestPrey != None) :
+            return (furthestPrey.y < y, furthestPrey.y > y, furthestPrey.x < x, furthestPrey.x > x)
+        else :
+            return (closestPredator.y > y, closestPredator.y < y, closestPredator.x > x, closestPredator.x < x)
 
 def calculatePlayersEats(players) :
     for p1 in players :
@@ -113,24 +200,32 @@ def main():
     players = []
     fruits = []
 
-    # generate random players for testing
-    for i in range(1, 10):
-        players.append(
-            Player(
-                "player " + str(i),  
-                pygame.Color(random.randint(1, 255), random.randint(1, 255), random.randint(1, 255)),
-                random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), 
-                #SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
-                random.randint(5, 15), #SPAWN_PLAYER_SIZE,
-                nextMoveTemplate
-            )
+    players.append(
+        Player(
+            "Mira",  
+            pygame.Color(204, 0, 204),
+            random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), 
+            SPAWN_PLAYER_SIZE,
+            miraStrategy
         )
+    )
 
-    for i in range(1, 30):
+    players.append(
+        Player(
+            "Mohamed",  
+            pygame.Color(51, 51, 255),
+            random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), 
+            SPAWN_PLAYER_SIZE,
+            mohamedStrategy
+        )
+    )
+
+    for i in range(1, NUMBER_OF_FRUITS):
         fruits.append(
             Fruit(
-                random.randint(SCREEN_WIDTH / 2, SCREEN_WIDTH), random.randint(SCREEN_HEIGHT / 2, SCREEN_HEIGHT), 
-                random.randint(10, 20)
+                random.randint(0, SCREEN_WIDTH), 
+                random.randint(0, SCREEN_HEIGHT), 
+                random.randint(MIN_FRUIT_SIZE, MAX_FRUIT_SIZE)
             )
         )
 
@@ -147,6 +242,15 @@ def main():
         movePlayers(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
         calculatePlayersEats(players)
         calcuateFruitEats(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
+
+        while (len(fruits) < NUMBER_OF_FRUITS) :
+            fruits.append(
+                Fruit(
+                    random.randint(0, SCREEN_WIDTH), 
+                    random.randint(0, SCREEN_HEIGHT), 
+                    random.randint(MIN_FRUIT_SIZE, MAX_FRUIT_SIZE)
+                )
+            )
 
         draw_window(players, fruits)
 
