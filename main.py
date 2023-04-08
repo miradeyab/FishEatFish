@@ -124,6 +124,8 @@ def miraStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
             minD = d
             bestFruit = fruit
 
+            pass
+
     if r <= enemyR:
         if enemy.distance(x, y) <= DANGER_DISTANCE:
             return awayFrom(x, y, enemyX, enemyY)
