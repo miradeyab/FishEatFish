@@ -67,7 +67,9 @@ def movePlayers(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
         otherPlayers = players.copy()
         otherPlayers.remove(player)
 
-        (up, down, left, right) = player.nextMove(copy.deepcopy(player), otherPlayers, copy.deepcopy(fruits), SCREEN_WIDTH, SCREEN_HEIGHT)
+        nextMove = player.nextMove(copy.deepcopy(player), otherPlayers, copy.deepcopy(fruits), SCREEN_WIDTH, SCREEN_HEIGHT)
+
+        (up, down, left, right) = nextMove if nextMove != None else (False, False, False, False)        
 
         player.y -= VELOCITY if up else 0   
         player.y += VELOCITY if down else 0
@@ -191,9 +193,9 @@ def mohamedStrategy(me, players, fruits, W, H) :
         if bestFruitValue > preyValue :
             return towards(x, y, bestFruit.x, bestFruit.y)
         else :
-            return towards(x, y, bestFruit.x, bestFruit.y)
+            return towards(x, y, X, Y)
     else :
-        danger = (me.distance(X, Y) / GREAT_RADIUS)
+        danger = (1 - me.distance(X, Y) / GREAT_RADIUS)
 
         if bestFruitValue > danger :
             return towards(x, y, bestFruit.x, bestFruit.y)
@@ -283,7 +285,7 @@ def main():
             pygame.Color(51, 51, 255),
             random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), 
             SPAWN_PLAYER_SIZE,
-            defaulStrategy
+            mohamedStrategy
         )
     )
 
@@ -306,8 +308,8 @@ def main():
             if event.type == pygame.QUIT:
                 run = False
         
-        if(len(players) <= 1) :
-            break;
+        if len(players) <= 1 :
+            continue
 
         movePlayers(players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
         calculatePlayersEats(players)
