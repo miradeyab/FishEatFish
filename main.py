@@ -128,7 +128,8 @@ def miraStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT) :
 
     if r <= enemyR:
         if enemy.distance(x, y) <= DANGER_DISTANCE:
-            return awayFrom(x, y, enemyX, enemyY)
+                
+            return defaulStrategy(you, players, fruits, SCREEN_WIDTH, SCREEN_HEIGHT)
         else:
             return towards(x, y, bestFruit.x, bestFruit.y)
     else:
@@ -200,7 +201,7 @@ def mohamedStrategy(me, players, fruits, W, H) :
         if bestFruitValue > danger :
             return towards(x, y, bestFruit.x, bestFruit.y)
         else :
-            return awayFrom(x, y, X, Y)
+            return defaulStrategy(me, players, fruits, W, H)
 
 
 def strategy(you, predators, preys, W, H) :
